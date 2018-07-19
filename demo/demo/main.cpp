@@ -5,11 +5,11 @@
 #include <fstream>
 #include <stdlib.h>
 #include <unistd.h>
-#include "tracker.h"
+#include "deepsort.h"
 #include "VCATime.h"
 #include "VCAImage.h"
 
-typedef std::vector<DETECTIONS> FRAMES;
+typedef std::vector<DS_DetectObjects> FRAMES;
 static FRAMES frames;
 static int frame_index=0;
 static Scalar array_color[8]=
@@ -35,8 +35,8 @@ bool LoadDetection(char *p_file_name)
 	}
 	int current_frame_index=0;
 	char line_buffer[1024];
-	DETECTION_ROW temp_object;
-	DETECTIONS detections;
+	DS_DetectObject temp_object;
+	DS_DetectObjects detections;
 	detections.clear();
 	frames.clear();
 	frame_index=0;
@@ -61,11 +61,12 @@ bool LoadDetection(char *p_file_name)
 				detections.clear();
 				current_frame_index=read_frame_index;
 			}
+			temp_object.class_id=0;
 			temp_object.confidence=read_confidence;
-			temp_object.tlwh = DETECTBOX(read_rect[0], read_rect[1], read_rect[2], read_rect[3]);
-#ifdef FEATURE_MATCH_EN
-			temp_object.feature.setZero();
-#endif 
+			temp_object.x=read_rect[0];
+			temp_object.y=read_rect[1];
+			temp_object.width=read_rect[2];
+			temp_object.height=read_rect[3];
 			detections.push_back(temp_object);
 		}
 		else
@@ -80,7 +81,7 @@ bool LoadDetection(char *p_file_name)
 	return true;
 }
 
-bool ReadFrame(DETECTIONS &detections)
+bool ReadFrame(DS_DetectObjects &detections)
 {
 	if(frame_index>=frames.size())
 	{
@@ -93,13 +94,18 @@ bool ReadFrame(DETECTIONS &detections)
 
 int main(int argc, char* argv[])
 {
-	tracker mytracker(0.2, 100);
+	DS_Tracker h_tracker=DS_Create();
+	if(NULL==h_tracker)
+	{
+		printf("DS_CreateTracker error.\n");
+		return 0;
+	}
 	int frame_count=0;
 	CTickTime tick_time; 
 
 	if(argc<4)
 	{
-		printf("Parameter error.");
+		printf("Parameter error.\n");
 		return 0;
 	}
 	Size image_size;
@@ -124,33 +130,31 @@ int main(int argc, char* argv[])
 		printf("Image Size: %dx%d\n", image_size.width, image_size.height);
 		show_image.create(image_size.height, image_size.width, CV_8UC3);
 	}
-	DETECTIONS detections;
-	tick_time.Start();
-	while(ReadFrame(detections))
-	{
-		mytracker.predict();
-		mytracker.update(detections);
+	DS_DetectObjects detect_objects;
+	DS_TrackObjects track_objects;
 
-		DETECTBOX output_box;
+	tick_time.Start();
+	while(ReadFrame(detect_objects))
+	{
+		DS_Update(h_tracker, detect_objects, track_objects);
+
 		if(show_image_en)
 		{
 			show_image.setTo(g_black);
 		}
-		for(Track& track : mytracker.tracks) 
+		for(int iloop=0;iloop<track_objects.size();iloop++) 
 		{
-			if(!track.is_confirmed() || track.time_since_update > 1) continue;
-			output_box=track.to_tlwh();
 			//printf("%d(%d,%d,%d,%d)\n", track.track_id,(int)output_box(0),(int)output_box(1),(int)output_box(2),(int)output_box(3));
 			Rect temp_rect;
-			temp_rect.x=output_box(0);
-			temp_rect.y=output_box(1);
-			temp_rect.width=output_box(2);
-			temp_rect.height=output_box(3);
+			temp_rect.x=track_objects[iloop].x;
+			temp_rect.y=track_objects[iloop].y;
+			temp_rect.width=track_objects[iloop].width;
+			temp_rect.height=track_objects[iloop].height;
 			if(show_image_en)
 			{
 				char caption[32];
-				sprintf(caption, "%d", track.track_id);
-				ShowTagRMCT(show_image, temp_rect, caption, array_color[track.track_id%8], 1, false);
+				sprintf(caption, "%d", track_objects[iloop].track_id);
+				ShowTagRMCT(show_image, temp_rect, caption, array_color[track_objects[iloop].track_id%8], 1, false);
 			}
 		}
 		if(show_image_en)
