@@ -143,8 +143,14 @@ int main(int argc, char* argv[])
 			show_image=imread(image_file_name);
 			if(show_image.empty())
 			{
-				printf("Error.imread(%s)\n", image_file_name);
-				return 0;
+				sprintf(image_file_name, "%s/det/000001-acf.jpg", FLAGS_path.c_str());
+				show_image=imread(image_file_name);
+				if(show_image.empty())
+				{
+					printf("Error.imread(%s)\n", image_file_name);
+					return 0;
+				}
+				show_image.setTo(g_black);
 			}
 			for(auto oloop : track_objects) 
 			{

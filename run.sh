@@ -1,5 +1,6 @@
 cd build/demo
-./demo
+./demo -show
+
 
 
 
