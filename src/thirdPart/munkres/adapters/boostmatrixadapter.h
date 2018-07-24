@@ -19,6 +19,7 @@
 #ifndef _BOOSTMATRIXADAPTER_H_
 #define _BOOSTMATRIXADAPTER_H_
 
+#if 0
 #include "adapter.h"
 #ifndef WIN32
 #include <boost/serialization/array_wrapper.hpp>
@@ -52,5 +53,6 @@ public:
           }
     }
 };
+#endif
 
 #endif /* _BOOSTMATRIXADAPTER_H_ */

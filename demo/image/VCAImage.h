@@ -17,9 +17,9 @@ extern Scalar g_pinkish_red;
 
 
 void ShowTagColor(Mat &input_image, Point *p_pt, const char *p_msg_buffer, Scalar o_scalar=Scalar(255,255,0), bool show_tag_bg=true);
-void ShowTagRMCT(Mat &input_image, Rect &o_rect, const char *p_msg_buffer=NULL, Scalar o_scalar=Scalar(255,255,0), int thickness=1, bool show_position=true, bool show_tag_bg=true, int tag_position=0);
-
-
+void ShowTagRMCT(Mat &input_image, Rect o_rect, const char *p_msg_buffer=NULL, Scalar o_scalar=Scalar(255,255,0), int thickness=1, bool show_position=true, bool show_tag_bg=true, int tag_position=0);
+void ShowCoordinate(Mat &input_image, Rect o_rect, Scalar o_scalar, int thickness);
+void ShowTrail(Mat &input_image, Rect trail1, Rect trail2, Scalar o_scalar, int thickness);
 #endif
 
 

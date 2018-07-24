@@ -8,9 +8,10 @@
 #include "deepsort.h"
 #include "VCATime.h"
 #include "VCAImage.h"
+#include <gflags/gflags.h>
+using namespace std;
 
-typedef std::vector<DS_DetectObjects> FRAMES;
-static FRAMES frames;
+static vector<pair<int, DS_DetectObjects>>frames;
 static int frame_index=0;
 static Scalar array_color[8]=
 {
@@ -24,16 +25,17 @@ g_yellow,
 g_pinkish_red
 };
 
-bool LoadDetection(char *p_file_name)
+bool LoadDetection(const char *p_file_name)
 {
+	printf("Load detection label: %s\n", p_file_name);
 	FILE *fp=NULL;
 	fp=fopen(p_file_name, "rb");
 	if(NULL == fp)
 	{
-		printf("File %s not exist!", p_file_name);
+		printf("Label file not exist!");
 		return false;
 	}
-	int current_frame_index=0;
+	int current_frame_index=1;
 	char line_buffer[1024];
 	DS_DetectObject temp_object;
 	DS_DetectObjects detections;
@@ -57,21 +59,21 @@ bool LoadDetection(char *p_file_name)
 				);
 			if(current_frame_index!=read_frame_index)
 			{
-				frames.push_back(detections);
+				frames.push_back(make_pair(current_frame_index, detections));
 				detections.clear();
 				current_frame_index=read_frame_index;
 			}
 			temp_object.class_id=0;
-			temp_object.confidence=read_confidence;
-			temp_object.x=read_rect[0];
-			temp_object.y=read_rect[1];
-			temp_object.width=read_rect[2];
-			temp_object.height=read_rect[3];
+			temp_object.confidence=read_confidence/100;
+			temp_object.rect.x=read_rect[0];
+			temp_object.rect.y=read_rect[1];
+			temp_object.rect.width=read_rect[2];
+			temp_object.rect.height=read_rect[3];
 			detections.push_back(temp_object);
 		}
 		else
 		{
-			frames.push_back(detections);
+			frames.push_back(make_pair(current_frame_index, detections));
 			detections.clear();
 			current_frame_index=0;
 			break;
@@ -81,86 +83,87 @@ bool LoadDetection(char *p_file_name)
 	return true;
 }
 
-bool ReadFrame(DS_DetectObjects &detections)
+bool ReadFrame(int &read_frame_index, DS_DetectObjects &detections)
 {
 	if(frame_index>=frames.size())
 	{
 		return false;
 	}
-	detections=frames[frame_index];
+	read_frame_index=frames[frame_index].first;
+	detections=frames[frame_index].second;
 	frame_index++;
 	return true;
 }
 
+DEFINE_bool(show, false, "Show images");
+DEFINE_string(path, "../../data/2DMOT2015/test/PETS09-S2L2", "Detect data path");
+
+#define TO_CVRect(ds_rect) Rect(ds_rect.x, ds_rect.y, ds_rect.width, ds_rect.height)
 int main(int argc, char* argv[])
 {
+	gflags::SetVersionString("1.0.0");
+	gflags::SetUsageMessage("Usage : ./demo ");
+	google::ParseCommandLineFlags(&argc, &argv, true);
+
 	DS_Tracker h_tracker=DS_Create();
 	if(NULL==h_tracker)
 	{
 		printf("DS_CreateTracker error.\n");
 		return 0;
 	}
-	int frame_count=0;
+	int frame_count=0; 
 	CTickTime tick_time; 
 
-	if(argc<4)
-	{
-		printf("Parameter error.\n");
-		return 0;
-	}
-	Size image_size;
-	image_size.width=atoi(argv[2]);
-	image_size.height=atoi(argv[3]);
-	bool show_image_en=false;
-	if(argc>=5)
-	{
-		if(0==strcasecmp(argv[4], "-show"))
-		{
-			show_image_en=true;
-		}
-	}
-	if(!LoadDetection(argv[1]))
+	char label_file_name[1024];
+	sprintf(label_file_name, "%s/det/det.txt", FLAGS_path.c_str());
+	if(!LoadDetection(label_file_name))
 	{
 		return 0;
 	}
-	printf("%s\n", argv[1]);
 	Mat show_image;
-	if(show_image_en)
-	{
-		printf("Image Size: %dx%d\n", image_size.width, image_size.height);
-		show_image.create(image_size.height, image_size.width, CV_8UC3);
-	}
 	DS_DetectObjects detect_objects;
 	DS_TrackObjects track_objects;
-
+	int read_frame_index;
+	char image_file_name[1024];
 	tick_time.Start();
-	while(ReadFrame(detect_objects))
+	while(ReadFrame(read_frame_index, detect_objects))
 	{
 		DS_Update(h_tracker, detect_objects, track_objects);
-
-		if(show_image_en)
+		printf("\n%-10s%-10s%-10s%s\n", "track_id", "class_id", "confidence", "position");
+		printf("-------------------------------\n");
+		for(auto oloop : track_objects) 
 		{
-			show_image.setTo(g_black);
+			printf("%-10d%-10d%-10f%d,%d,%d,%d\n", oloop.track_id, oloop.class_id, oloop.confidence, 
+				oloop.rect.x,oloop.rect.y,oloop.rect.width,oloop.rect.height);
 		}
-		for(int iloop=0;iloop<track_objects.size();iloop++) 
+
+		if(FLAGS_show)
 		{
-			//printf("%d(%d,%d,%d,%d)\n", track.track_id,(int)output_box(0),(int)output_box(1),(int)output_box(2),(int)output_box(3));
-			Rect temp_rect;
-			temp_rect.x=track_objects[iloop].x;
-			temp_rect.y=track_objects[iloop].y;
-			temp_rect.width=track_objects[iloop].width;
-			temp_rect.height=track_objects[iloop].height;
-			if(show_image_en)
+			sprintf(image_file_name, "%s/img1/%06d.jpg", FLAGS_path.c_str(), read_frame_index);
+			show_image=imread(image_file_name);
+			if(show_image.empty())
+			{
+				printf("Error.imread(%s)\n", image_file_name);
+				return 0;
+			}
+			for(auto oloop : track_objects) 
 			{
 				char caption[32];
-				sprintf(caption, "%d", track_objects[iloop].track_id);
-				ShowTagRMCT(show_image, temp_rect, caption, array_color[track_objects[iloop].track_id%8], 1, false);
+				sprintf(caption, "%d", oloop.track_id);
+				ShowTagRMCT(show_image, TO_CVRect(oloop.rect), caption, array_color[oloop.track_id%8], 1, false);
 			}
-		}
-		if(show_image_en)
-		{
+
+			static bool pause=false;
 			imshow("DeepSort", show_image);
-			cvWaitKey(40);
+			int input_key=cvWaitKey(pause? 0:40);
+			if(input_key==32)
+			{
+				pause=!pause;
+			}
+			else if(input_key==27)
+			{
+				break;
+			}
 		}
 		frame_count++;
 	}
@@ -169,5 +172,6 @@ int main(int argc, char* argv[])
 	printf("Going time: %f\n", tick_time.GoingTime());
 	printf("Speed: %f\n", frame_count*1000.0/tick_time.GoingTime());
 	printf("\n");
+	DS_Delete(h_tracker);
 	return 0;
 }

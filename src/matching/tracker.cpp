@@ -183,10 +183,10 @@ void tracker::_initiate_track(const DETECTION_ROW &detection)
     KAL_COVA covariance = data.second;
 #ifdef FEATURE_MATCH_EN
     this->tracks.push_back(Track(mean, covariance, this->_next_idx, this->n_init,
-                                 this->max_age, detection.feature));
+                                 this->max_age, detection.feature, detection.class_id, detection.confidence));
 #else
     this->tracks.push_back(Track(mean, covariance, this->_next_idx, this->n_init,
-                                 this->max_age));
+                                 this->max_age, detection.class_id, detection.confidence));
 #endif
     _next_idx += 1;
 }

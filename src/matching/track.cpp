@@ -1,9 +1,9 @@
 #include "track.h"
 
 #ifdef FEATURE_MATCH_EN
-Track::Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id, int n_init, int max_age, const FEATURE& feature)
+Track::Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id, int n_init, int max_age, const FEATURE& feature, int class_id, float confidence)
 #else
-Track::Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id, int n_init, int max_age)
+Track::Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id, int n_init, int max_age, int class_id, float confidence)
 #endif
 {
     this->mean = mean;
@@ -19,6 +19,8 @@ Track::Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id, int n_init, int
 #endif
     this->_n_init = n_init;
     this->_max_age = max_age;
+    this->class_id=class_id;
+    this->confidence=confidence;
 }
 
 
@@ -53,6 +55,8 @@ void Track::update(KalmanFilter * const kf, const DETECTION_ROW& detection)
     if(this->state == TrackState::Tentative && this->hits >= this->_n_init) {
         this->state = TrackState::Confirmed;
     }
+    this->class_id=detection.class_id;
+    this->confidence=detection.confidence;
 }
 
 void Track::mark_missed()

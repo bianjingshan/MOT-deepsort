@@ -58,10 +58,10 @@ class Track
 public:
 #ifdef FEATURE_MATCH_EN
     Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id,
-          int n_init, int max_age, const FEATURE& feature);
+          int n_init, int max_age, const FEATURE& feature, int class_id, float confidence);
 #else
     Track(KAL_MEAN& mean, KAL_COVA& covariance, int track_id,
-          int n_init, int max_age);
+          int n_init, int max_age, int class_id, float confidence);
 #endif
     void predit(KalmanFilter *kf);
     void update(KalmanFilter * const kf, const DETECTION_ROW &detection);
@@ -81,6 +81,8 @@ public:
     int _n_init;
     int _max_age;
     TrackState state;
+    float confidence;
+    int class_id;
 private:
     void featuresAppendOne(const FEATURE& f);
 };

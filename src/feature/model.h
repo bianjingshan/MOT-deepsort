@@ -13,6 +13,7 @@
  */
 class DETECTION_ROW {
 public:
+    int class_id;
     DETECTBOX tlwh; //np.float
     float confidence; //float
 #ifdef FEATURE_MATCH_EN

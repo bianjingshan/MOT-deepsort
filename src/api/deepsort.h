@@ -8,22 +8,27 @@
 
 typedef struct
 {
-	int class_id;
 	int x;
 	int y;
 	int width;
 	int height;
+}DS_Rect;
+
+typedef struct
+{
+	int class_id;
+	DS_Rect rect;
 	float confidence;
 }DS_DetectObject;
 
 typedef struct
 {
 	int track_id;
-	int x;
-	int y;
-	int width;
-	int height;
+	int class_id;
+	float confidence;
+	DS_Rect rect;
 }DS_TrackObject;
+
 
 typedef void * DS_Tracker;
 typedef std::vector<DS_DetectObject> DS_DetectObjects;

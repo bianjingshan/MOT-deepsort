@@ -78,12 +78,13 @@ bool DS_Update(
     DETECTIONS detections;
     for(int iloop=0;iloop<detect_objects.size();iloop++)
     {
+        temp_object.class_id=detect_objects[iloop].class_id;
         temp_object.confidence=detect_objects[iloop].confidence;
         temp_object.tlwh = DETECTBOX(
-            detect_objects[iloop].x, 
-            detect_objects[iloop].y, 
-            detect_objects[iloop].width, 
-            detect_objects[iloop].height);
+            detect_objects[iloop].rect.x, 
+            detect_objects[iloop].rect.y, 
+            detect_objects[iloop].rect.width, 
+            detect_objects[iloop].rect.height);
 #ifdef FEATURE_MATCH_EN
         temp_object.feature.setZero();
 #endif 
@@ -100,10 +101,12 @@ bool DS_Update(
         output_box=track.to_tlwh();
         
         track_object.track_id=track.track_id;
-        track_object.x=output_box(0);
-        track_object.y=output_box(1);
-        track_object.width=output_box(2);
-        track_object.height=output_box(3);
+        track_object.class_id=track.class_id;
+        track_object.confidence=track.confidence;
+        track_object.rect.x=output_box(0);
+        track_object.rect.y=output_box(1);
+        track_object.rect.width=output_box(2);
+        track_object.rect.height=output_box(3);
         track_objects.push_back(track_object);
     }
     return true;
